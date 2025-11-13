@@ -4,7 +4,7 @@ import {
   UnauthorizedException, 
   BadRequestException 
 } from '@nestjs/common';
-import { CustomerRepository } from '@model/index';
+import { CustomerRepository, UserRepository } from '@model/index';
 import { ConfigService } from '@nestjs/config';
 import { Customer } from './entities/auth.entity';
 import { sendMail } from '@common/helpers';
@@ -19,6 +19,8 @@ export class AuthService {
   constructor(
     private readonly configService: ConfigService,
     private readonly customerRepository: CustomerRepository,
+    private readonly userRepository: UserRepository,
+
     private readonly jwtService: JwtService,
     private readonly googleAuthService: GoogleAuthService,
   ) {}
@@ -47,7 +49,7 @@ export class AuthService {
   }
 
   async login(loginDto: LoginDto) {
-    const customerExist = await this.customerRepository.getOne({
+    const customerExist = await this.userRepository.getOne({
       email: loginDto.email
     }, {}, {});
     

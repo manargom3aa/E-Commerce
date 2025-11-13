@@ -1,35 +1,61 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { ConfigService } from '@nestjs/config';
-import { AdminRepository, CustomerRepository, SellerRepository } from '@model/index';
+import { AdminRepository, BrandRepository, CustomerRepository, Product, ProductRepository, SellerRepository } from '@model/index';
+import { CategoryService } from '@modules/category/category.service';
+import { BrandService } from '@modules/brand/brand.service';
+import { Types } from 'mongoose';
+import { message } from '@common/constant';
+import slugify from 'slugify';
 
 @Injectable()
 export class ProductService {
   constructor(
-    private readonly ConfigService: ConfigService,
-    private readonly sellerRepository: SellerRepository,
-    private readonly adminRepository: AdminRepository,
-    private readonly customerRepository: CustomerRepository,
+    private readonly productRepository: ProductRepository ,
+    private readonly categoryService: CategoryService,
+    private readonly brandService: BrandService,
     
   ) {}
-  create(createProductDto: CreateProductDto) {
-    return 'This action adds a new product';
+
+  async create(product: Product) {
+    await this.categoryService.findOne(product.categoryId);
+
+    await this.brandService.findOne(product.brandId);
+    return await this.productRepository.create(product)
   }
 
-  findAll() {
-    return `This action returns all product`;
+  async findAll() {
+    return await this.productRepository.getAll({});
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  async findById(id: string | Types.ObjectId) {
+    const product = await this.productRepository.getOne({ _id: id });
+    if (!product) throw new NotFoundException(message.Product.notFound);
+    return product;
   }
 
-  update(id: number, updateProductDto: UpdateProductDto) {
-    return `This action updates a #${id} product`;
+  async update(id: string | Types.ObjectId, data: any) {
+    const productExist = await this.productRepository.getOne({ _id: id });
+    if (!productExist) throw new NotFoundException(message.Product.notFound);
+
+    if (data.name) {
+      const slug = slugify(data.name, { lower: true, trim: true });
+      const duplicate = await this.productRepository.getOne({ slug });
+      if (duplicate && duplicate._id.toString() !== id.toString()) {
+        throw new ConflictException(message.Product.alreadyExist);
+      }
+      data.slug = slug;
+    }
+
+    return await this.productRepository.updateOne({ _id: id }, data, { new: true });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} product`;
+  async delete(id: string | Types.ObjectId) {
+    const productExist = await this.productRepository.getOne({ _id: id });
+    if (!productExist) throw new NotFoundException(message.Product.notFound);
+
+    await this.productRepository.deleteOne({ _id: id });
+    return { success: true, message: message.Product.deleted };
   }
 }

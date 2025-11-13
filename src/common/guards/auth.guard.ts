@@ -1,4 +1,5 @@
-import { CustomerRepository } from '@model/index';
+import { PUBLIC } from '@common/decorators';
+import { UserRepository } from '@model/index';
 import { Injectable, CanActivate, ExecutionContext, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
@@ -9,14 +10,19 @@ export class AuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
-    private readonly customerRepository: CustomerRepository,
+    private readonly userRepository: UserRepository,
+    private readonly reflector: Reflector,
    
 
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    const request = context.switchToHttp().getRequest();
-    const { authorization } = request.headers;
+    
+    try {
+      const publicVal = this.reflector.get(PUBLIC, context.getHandler())
+      if (publicVal) return true;
+      const request = context.switchToHttp().getRequest();
+      const { authorization } = request.headers;
 
     if (!authorization) {
       throw new UnauthorizedException('Authorization header not provided');
@@ -35,10 +41,14 @@ export class AuthGuard implements CanActivate {
       secret: this.configService.get('access').jwt_secret,
     });
 
-    const customerExist = await this.customerRepository.getOne({ _id: payload._id }, {}, {});
-    if (!customerExist) throw new NotFoundException('user not found');
+    const userExist = await this.userRepository.getOne({ _id: payload._id }, {}, {});
+    if (!userExist) throw new NotFoundException('user not found');
 
-    request.user = customerExist;
+    request.user = userExist;
     return true;
+    } catch (error) {
+      throw new UnauthorizedException(error.message)
+    }
+   
   }
 }

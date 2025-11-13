@@ -17,7 +17,16 @@ export class AbstractRepository<T> {
         return this.model.findOne(filter, projection, options);
     }
 
-    // إصلاح دوال التحديث
+        public async getAll(
+        filter: RootFilterQuery<T>,
+        projection: ProjectionType<T> = {},
+        options: QueryOptions = {},
+        query?:any,
+    ){
+  
+        return this.model.find(filter, projection, options);
+    }
+    
     public async updateOne(
         filter: RootFilterQuery<T>,
         update: UpdateQuery<T>,
@@ -32,5 +41,10 @@ public async updateMany(
     options: MongooseUpdateQueryOptions<T> = {}
 ) {
     return this.model.updateMany(filter, update, options);
+}
+
+public async deleteOne(filter: RootFilterQuery<T>) {
+  const deleted = await this.model.findOneAndDelete(filter);
+  return deleted;
 }
 }

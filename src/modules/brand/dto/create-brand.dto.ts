@@ -1,9 +1,10 @@
 import { IsNotEmpty, IsString, MinLength } from "class-validator";
 
-export class CreateCategoryDto {
+export class CreateBrandDto {
     @IsString()
     @IsNotEmpty()
-    @MinLength(2)    
+    @MinLength(2)
     name:string;
+
     logo:Object;
 }
